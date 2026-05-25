@@ -13,10 +13,10 @@ Browser A → Nginx LB → Server 1 → Redis Pub/Sub → Server 2 → Browser B
 ```
 
 - **2 Express+WebSocket servers** 
-- **Redis Pub/Sub** — each server publishes Yjs deltas to `room:<id>`; the other server subscribes and relays to its local clients. Basically if User on Server 1 draws something Server 2 must also know about it , Redis sends updates between them
+- **Redis Pub/Sub** — Each server sends document updates (which are yjs changes) to a communication channel named room. the other server subscribes and relays to its local clients. Basically if User on Server 1 draws something Server 2 must also know about it , redis sends updates between these servers.
 
-- **admin absence timer** — if admin leaves the room then a 2 min timer starts
-- **JWT auth** — HTTP-only; WebSocket connections pass token as query param `?token=<jwt>`
+- **admin absence timer** — if admin leaves the room than a 2 min timer starts
+- **JWT auth** — HTTP-only; WebSocket connections pass token as query parameter.
 
 ## terminal commands to run
 
@@ -32,7 +32,7 @@ docker compose up -d
 cd backend
 cp .env         
 npm install
-npm run dev                   # starts both servers on :3001 and :3002
+npm run dev                  
 ```
 
 ### 3. Frontend
@@ -40,7 +40,7 @@ npm run dev                   # starts both servers on :3001 and :3002
 ```bash
 cd frontend
 npm install
-npm run dev                   # dev server on http://localhost:5173
+npm run dev                  
 ```
 ---
 
@@ -57,15 +57,15 @@ npm run dev                   # dev server on http://localhost:5173
 
 ## API Reference
 
-List of backend endpoints frontend can call.
+ it is basically a ist of backend endpoints frontend can call.
 
 
-### Auth
- used to create a new account. 
+### Authentication
+it is used to create a new account. 
  
- The backend flow is simply like this in case of register backend checks if email already exists then hashes password and stores user in database and creates a JWT token.
+The backend flow is simply like this,  in case a artist registers backend checks if email already exists then hashes password and stores artist in database and creates a jwt token.
 
- In case of login the backend flow is it finds user by email and then compares hashed passwords and generates a JWT token 
+ In case of login the backend flow is basically like it finds user by email and then compares hashed passwords and generates a jwt token 
 
 
 | Method | Path                 | Body                          | Description           |
@@ -88,13 +88,13 @@ List of backend endpoints frontend can call.
 
 ### WebSocket
 
-Connect to `ws://<host>/ws?token=<jwt>&roomId=<id>`, persistent connection, live sync
+Connect to `ws://<host>/ws?token=<jwt>&roomId=<id>`, helps in persistent connection nd live sync
 
-**Binary frames** —  these are binary packets usually Yjs update (handled automatically by y-websocket) binary packs data compactly. so much faster and smaller process.
+**Binary frames** —  these are binary packets usually Yjs update (handled automatically by y-websocket) . yjs stores data in binary packs. it stores the data compactly. so  these are much faster and its a smaller process.
 
-**JSON control frames** (send):
+**JSON control frames** :
  
- They are normal text-based WebSocket messages used for commands, events, and metadata  not the actual drawing sync data. Binary is more efficient, but things like kicking users, cursor movements, and room notifications are easier to handle by JSON data frames.
+ They are normal text-based websocket messages used for commands, events, and metadata  not the actual drawing sync data. Binary is more efficient, but things like kicking users, cursor movements, and room notifications are easier to handle by json data frames.
 
 
 ```json
@@ -117,10 +117,10 @@ Connect to `ws://<host>/ws?token=<jwt>&roomId=<id>`, persistent connection, live
 
 ## Technology choices
 
-**Yjs** — I have chosen this because it's optimized for array CRDT(Conflict-free Replicated Data Type ), has a `y-websocket` provider, and its binary encoding is compact (important for high-frequency canvas deltas). also conflict resolution is automatic if two users draw something at same time it produces a merge without manual help. also it was recommended in PS.
+**Yjs** — I have chosen this because it's optimized for array CRDT(Conflict-free Replicated Data Type ), has a y-websocket provider, and its binary encoding makes it compact (important for high-frequency canvas deltas). also conflict resolution is automatic if two users draw something at same time it produces a merge without manual help. also it was recommended in PS.
 
-**Redis Pub/Sub** — the simplest solution for cross-server message fan-out. Pattern subscribe (`PSUBSCRIBE room:*`) means servers don't need to track which rooms are active at startup.
+**Redis Pub/Sub** — the simplest solution for cross-server message fan-out. Pattern subscribe (PSUBSCRIBE room:) means servers don't need to track which rooms are active at startup.
 
-**Konva.js** — handles zooming and moving around the infinite canvas by transforming the whole “camera view” instead of changing every drawing one by one.
+**Konva.js** — handles zooming and moving around the infinite canvas by transforming the whole camera view instead of changing every drawing one by one.
 
-**JWT** — stateless auth means both server instances can validate tokens independently without shared session storage. Token is passed as a query param on WS upgrade (standard practice since WS handshakes don't support custom headers in browsers).
+**JWT** — stateless auth means both server instances can validate tokens independently without shared session storage. Token is passed as a query parameter on ws upgrade (standard practice since ws handshakes don't support custom headers in browsers).
